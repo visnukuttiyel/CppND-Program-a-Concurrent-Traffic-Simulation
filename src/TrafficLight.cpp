@@ -4,6 +4,33 @@
 
 /* Implementation of class "MessageQueue" */
 
+
+    // {
+    //     // perform queue modification under the lock
+    //     std::unique_lock<std::mutex> uLock(_mutex);  // lock_guard cant be used here since lock needs to be temporarily released during wait
+    //     // !_messages.empty()  gaurds againist spurious wakeups or random wakeups
+    //     _cond.wait(uLock, [this] { return !_messages.empty(); }); // pass unique lock to condition variable
+
+    //     // remove last vector element from queue
+    //     T msg = std::move(_messages.back());
+    //     _messages.pop_back();
+
+    //     return msg; // will not be copied due to return value optimization (RVO) in C++
+    // }
+
+    // {
+    //     // simulate some work
+    //     std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    //     // perform vector modification under the lock
+    //     std::lock_guard<std::mutex> uLock(_mutex);  // lock is released once ulock gets out of scope
+
+    //     // add vector to queue
+    //     std::cout << "   Message " << msg << " has been sent to the queue" << std::endl;
+    //     _messages.push_back(std::move(msg));
+    //     _cond.notify_one(); // notify client after pushing new Vehicle into vector
+    // }
+
 /* 
 template <typename T>
 T MessageQueue<T>::receive()
@@ -44,6 +71,7 @@ TrafficLightPhase TrafficLight::getCurrentPhase()
 void TrafficLight::simulate()
 {
     // FP.2b : Finally, the private method „cycleThroughPhases“ should be started in a thread when the public method „simulate“ is called. To do this, use the thread queue in the base class. 
+    threads.emplace_back(std::thread(&TrafficLight::cycleThroughPhases, this));
 }
 
 // virtual function which is executed in a thread
