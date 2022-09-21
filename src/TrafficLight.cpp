@@ -14,12 +14,12 @@ T MessageQueue<T>::receive()
     // perform queue modification under the lock
     std::unique_lock<std::mutex> uLock(_mutex);  // lock_guard cant be used here since lock needs to be temporarily released during wait
 
-    // !_messages.empty()  gaurds againist spurious wakeups or random wakeups
-    _cond.wait(uLock, [this] { return !_queue.empty(); }); // pass unique lock to condition variable
+    // !_queue.empty()  gaurds againist spurious wakeups or random wakeups
+    _condition.wait(uLock, [this] { return !_queue.empty(); }); // pass unique lock to condition variable
 
     // remove last vector element from queue
-    T msg = std::move(_messages.back());
-    _messages.pop_back();
+    T msg = std::move(_queue.back());
+    _queue.pop_back();
     return msg; // will not be copied due to return value optimization (RVO) in C++
 }
 
@@ -35,7 +35,7 @@ void MessageQueue<T>::send(T &&msg)
         // add vector to queue
         std::cout << "   Message " << msg << " has been sent to the queue" << std::endl;
         _queue.push_back(std::move(msg));
-        _cond.notify_one(); // notify client after pushing new Vehicle into vector
+        _condition.notify_one(); // notify client after pushing new Vehicle into vector
 
 }
 
@@ -82,8 +82,8 @@ void TrafficLight::cycleThroughPhases()
     // to the message queue using move semantics. The cycle duration should be a random value between 4 and 6 seconds. 
     // Also, the while-loop should use std::this_thread::sleep_for to wait 1ms between two cycles. 
 
-    int lower_boundary(4);  // assuming 4 milliseconds
-    int higher_boundary(6); // assuming 4 milliseconds
+    int lower_boundary(4000);  // assuming 4 milliseconds
+    int higher_boundary(6000); // assuming 4 milliseconds
     
     double cycleDuration = lower_boundary + static_cast <double> (rand()) /( static_cast <double> (RAND_MAX/(higher_boundary-lower_boundary)));// duration of a single simulation cycle in ms
     std::chrono::time_point<std::chrono::system_clock> lastUpdate;
@@ -99,6 +99,7 @@ void TrafficLight::cycleThroughPhases()
         {
              
             _currentPhase = _currentPhase == TrafficLightPhase::red ? TrafficLightPhase::green : TrafficLightPhase::red;
+            _traffic_light_phase_msg_queue.send(std::move(_currentPhase));
             // reset stop watch for next cycle
             lastUpdate = std::chrono::system_clock::now();
         }
