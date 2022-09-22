@@ -33,8 +33,9 @@ void MessageQueue<T>::send(T &&msg)
         std::lock_guard<std::mutex> uLock(_mutex);  // lock is released once ulock gets out of scope
 
         // add vector to queue
-        std::cout << "   Message " << msg << " has been sent to the queue" << std::endl;
-        _queue.push_back(std::move(msg));
+        // std::cout << "   Message " << msg << " has been sent to the queue" << std::endl;
+        _queue.clear();
+        _queue.emplace_back(std::move(msg));
         _condition.notify_one(); // notify client after pushing new Vehicle into vector
 
 }
@@ -55,10 +56,9 @@ void TrafficLight::waitForGreen()
 
     while(true)
     {
-        _currentPhase = _traffic_light_phase_msg_queue.receive();
-        if( _currentPhase ==TrafficLightPhase::green)
+        if( _traffic_light_phase_msg_queue.receive() ==TrafficLightPhase::green)
         {
-            break;
+            return;
         }
     }
 
@@ -98,8 +98,7 @@ void TrafficLight::cycleThroughPhases()
         long timeSinceLastUpdate = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - lastUpdate).count();
         if (timeSinceLastUpdate >= cycleDuration)
         {
-             
-            _currentPhase = _currentPhase == TrafficLightPhase::red ? TrafficLightPhase::green : TrafficLightPhase::red;
+            _currentPhase = this->_currentPhase == TrafficLightPhase::red ? TrafficLightPhase::green : TrafficLightPhase::red;
             _traffic_light_phase_msg_queue.send(std::move(_currentPhase));
             // reset stop watch for next cycle
             lastUpdate = std::chrono::system_clock::now();
